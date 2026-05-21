@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RL4RLA: Teaching ML to Discover Randomized Linear Algebra Algorithms</title>
+  <meta name="description" content="RL4RLA: A curriculum-driven RL framework for discovering interpretable, symbolic randomized linear algebra algorithms. ICML 2026.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        macros: {
+          vx: '\\mathbf{x}', vb: '\\mathbf{b}', vv: '\\mathbf{v}',
+          rmA: '\\mathbf{A}', rmU: '\\mathbf{U}', rmV: '\\mathbf{V}',
+          rmQ: '\\mathbf{Q}', rmR: '\\mathbf{R}', rmS: '\\mathbf{S}',
+          rmD: '\\mathbf{D}', rmH: '\\mathbf{H}', rmI: '\\mathbf{I}',
+          veta: '\\eta',
+        }
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg:        #0b0f1a;
+      --bg2:       #111827;
+      --bg3:       #1a2233;
+      --card:      #141d2b;
+      --card2:     #1c2740;
+      --border:    #253045;
+      --primary:   #06b6d4;
+      --primary2:  #22d3ee;
+      --pglow:     rgba(6,182,212,.25);
+      --secondary: #8b5cf6;
+      --sglow:     rgba(139,91,246,.25);
+      --teal:      #14b8a6;
+      --violet:    #a855f7;
+      --amber:     #f59e0b;
+      --emerald:   #10b981;
+      --red:       #f87171;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --faint:     #475569;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ─── SCROLLBAR ─────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── NAV ───────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(11,15,26,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 56px;
+    }
+    .nav-brand {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: .95rem;
+      color: var(--primary); text-decoration: none;
+      letter-spacing: -.5px;
+    }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a {
+      font-size: .82rem; font-weight: 500;
+      color: var(--muted); text-decoration: none;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ─── HERO ──────────────────────────────────── */
+    #hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 7rem 1.5rem 4rem;
+      text-align: center; overflow: hidden;
+    }
+    #hero-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      opacity: .55;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(139,91,246,.15);
+      border: 1px solid rgba(139,91,246,.4);
+      color: #c4b5fd;
+      font-size: .75rem; font-weight: 600;
+      letter-spacing: .05em; text-transform: uppercase;
+      padding: .35rem .9rem; border-radius: 99px;
+      margin-bottom: 1.5rem;
+      position: relative; z-index: 1;
+    }
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700; line-height: 1.15;
+      letter-spacing: -.03em;
+      max-width: 900px;
+      position: relative; z-index: 1;
+    }
+    .hero-title .hl-cyan  { color: var(--primary2); }
+    .hero-title .hl-purple { color: #c4b5fd; }
+    .hero-title .hl-teal  { color: var(--teal); }
+
+    .hero-subtitle {
+      margin-top: 1.25rem;
+      font-size: 1.05rem; color: var(--muted);
+      max-width: 640px; line-height: 1.65;
+      position: relative; z-index: 1;
+    }
+    .authors-block {
+      margin-top: 2rem;
+      position: relative; z-index: 1;
+    }
+    .authors-line {
+      font-size: .92rem; color: var(--text);
+      line-height: 2;
+    }
+    .author-link {
+      color: var(--primary); text-decoration: none;
+      border-bottom: 1px dashed transparent;
+      transition: border-color .2s;
+    }
+    .author-link:hover { border-color: var(--primary); }
+    .equal-note { color: var(--amber); font-size: .75rem; vertical-align: super; }
+    .affil-badges {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: .5rem; margin-top: .75rem;
+    }
+    .affil-badge {
+      font-size: .72rem; font-weight: 500;
+      padding: .2rem .75rem; border-radius: 99px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .affil-badge.duke { border-color: #003087; color: #6ca3d8; background: rgba(0,48,135,.15); }
+    .affil-badge.dartmouth { border-color: #00693e; color: #5fba8c; background: rgba(0,105,62,.15); }
+
+    .btn-row {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: .75rem; margin-top: 2rem;
+      position: relative; z-index: 1;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      font-size: .85rem; font-weight: 600;
+      padding: .6rem 1.4rem; border-radius: 8px;
+      text-decoration: none; transition: all .2s;
+      border: 1px solid transparent; cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 0 18px var(--pglow);
+    }
+    .btn-primary:hover { background: var(--primary2); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: rgba(6,182,212,.08); }
+    .btn-purple {
+      background: rgba(139,91,246,.2); color: #c4b5fd;
+      border-color: rgba(139,91,246,.4);
+    }
+    .btn-purple:hover { background: rgba(139,91,246,.35); transform: translateY(-1px); }
+
+    .venue-tag {
+      margin-top: 1.5rem;
+      font-size: .8rem; color: var(--muted);
+      position: relative; z-index: 1;
+    }
+    .venue-tag strong { color: var(--amber); }
+
+    /* ─── SECTION LAYOUT ────────────────────────── */
+    section { padding: 5rem 1.5rem; }
+    section:nth-child(even) { background: var(--bg2); }
+
+    .container-lg { max-width: 1100px; margin: 0 auto; }
+    .container-md { max-width: 860px; margin: 0 auto; }
+
+    .section-tag {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .7rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--primary);
+      margin-bottom: .75rem;
+    }
+    .section-tag::before {
+      content: ''; width: 20px; height: 2px;
+      background: var(--primary); border-radius: 2px;
+    }
+    h2.sec-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 700; letter-spacing: -.02em;
+      margin-bottom: .75rem; line-height: 1.2;
+    }
+    .sec-lead {
+      color: var(--muted); font-size: 1rem;
+      max-width: 640px; margin-bottom: 3rem;
+    }
+
+    /* ─── TEASER STATS ───────────────────────────── */
+    #teaser { padding: 3.5rem 1.5rem; background: var(--bg3); }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem 1.75rem;
+      text-align: center;
+      transition: transform .2s, border-color .2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+    .stat-number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.4rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-size: .8rem; color: var(--muted); margin-top: .25rem; }
+
+    /* ─── ABSTRACT ───────────────────────────────── */
+    .abstract-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 3rem;
+      position: relative; overflow: hidden;
+    }
+    .abstract-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--teal));
+    }
+    .abstract-text {
+      font-size: 1rem; line-height: 1.8; color: var(--text);
+    }
+    .abstract-text mark {
+      background: rgba(6,182,212,.18); color: var(--primary2);
+      border-radius: 3px; padding: 0 2px;
+    }
+
+    /* ─── FIGURE PLACEHOLDER ─────────────────────── */
+    .fig-placeholder {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 3rem; text-align: center;
+      color: var(--faint); font-size: .85rem;
+      min-height: 280px;
+    }
+    .fig-placeholder i { font-size: 2.5rem; margin-bottom: 1rem; color: var(--border); }
+    .fig-placeholder .fig-name { font-family: var(--mono); font-size: .78rem; color: var(--muted); margin-top: .5rem; }
+    .fig-img {
+      width: 100%; border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .fig-caption {
+      font-size: .82rem; color: var(--muted);
+      margin-top: .75rem; line-height: 1.6; text-align: center;
+    }
+
+    /* ─── CONTRIBUTION CARDS ─────────────────────── */
+    .contrib-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .contrib-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.75rem;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      position: relative; overflow: hidden;
+    }
+    .contrib-card::after {
+      content: ''; position: absolute;
+      bottom: 0; left: 0; right: 0; height: 2px;
+    }
+    .contrib-card.c1::after { background: linear-gradient(90deg, var(--primary), var(--primary2)); }
+    .contrib-card.c2::after { background: linear-gradient(90deg, var(--secondary), var(--violet)); }
+    .contrib-card.c3::after { background: linear-gradient(90deg, var(--teal), var(--emerald)); }
+    .contrib-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 40px rgba(6,182,212,.12); }
+    .contrib-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; margin-bottom: 1rem;
+    }
+    .contrib-icon.ci1 { background: rgba(6,182,212,.15); color: var(--primary); }
+    .contrib-icon.ci2 { background: rgba(139,91,246,.15); color: var(--secondary); }
+    .contrib-icon.ci3 { background: rgba(20,184,166,.15); color: var(--teal); }
+    .contrib-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem; font-weight: 600;
+      margin-bottom: .5rem;
+    }
+    .contrib-card p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─── ALGORITHM TREE (SVG) ────────────────────── */
+    #alg-tree-wrapper {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1rem;
+      overflow-x: auto;
+    }
+    #alg-tree { width: 100%; max-width: 860px; display: block; margin: 0 auto; }
+    .tree-node { cursor: pointer; }
+    .tree-node rect { transition: filter .2s; }
+    .tree-node:hover rect { filter: brightness(1.25); }
+    .tree-node text { pointer-events: none; }
+
+    /* ─── CURRICULUM ─────────────────────────────── */
+    .curriculum-outer {
+      display: grid; grid-template-columns: 1fr 2fr;
+      gap: 2rem; align-items: start;
+    }
+    @media(max-width: 768px) { .curriculum-outer { grid-template-columns: 1fr; } }
+
+    .stage-nav {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+    .stage-btn {
+      width: 100%; padding: .9rem 1.25rem;
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      color: var(--muted); cursor: pointer; text-align: left;
+      font-size: .85rem; font-family: inherit;
+      display: flex; align-items: center; gap: .75rem;
+      transition: background .15s, color .15s;
+    }
+    .stage-btn:last-child { border-bottom: none; }
+    .stage-btn.active { background: rgba(6,182,212,.1); color: var(--primary); }
+    .stage-btn:not(.active):hover { background: var(--card2); color: var(--text); }
+    .stage-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; font-weight: 700; flex-shrink: 0;
+      background: var(--border); color: var(--muted);
+    }
+    .stage-btn.active .stage-num { background: var(--primary); color: #fff; }
+
+    .stage-panel {
+      display: none;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem;
+    }
+    .stage-panel.active { display: block; }
+    .stage-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .stage-badge {
+      font-size: .7rem; font-weight: 700; padding: .2rem .6rem;
+      border-radius: 99px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .stage-badge.new-algo { background: rgba(6,182,212,.15); color: var(--primary); border: 1px solid rgba(6,182,212,.3); }
+    .info-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem; margin-bottom: 1.25rem;
+    }
+    @media(max-width: 500px) { .info-row { grid-template-columns: 1fr; } }
+    .info-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .info-box-label {
+      font-size: .67rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--faint); margin-bottom: .35rem;
+    }
+    .info-box .fail { color: var(--red); font-size: .85rem; }
+    .info-box .setup { color: var(--muted); font-size: .85rem; }
+    .algo-block {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.25rem;
+      font-family: var(--mono); font-size: .82rem;
+      overflow-x: auto; line-height: 1.7;
+    }
+    .algo-block .kw { color: var(--primary2); }
+    .algo-block .op { color: var(--amber); }
+    .algo-block .comment { color: var(--faint); }
+    .algo-name {
+      display: inline-block; margin-top: .75rem;
+      font-size: .78rem; font-weight: 600;
+      padding: .2rem .75rem; border-radius: 99px;
+      background: rgba(16,185,129,.12);
+      border: 1px solid rgba(16,185,129,.3);
+      color: var(--emerald);
+    }
+
+    /* ─── MCGS SECTION ───────────────────────────── */
+    .mcgs-compare {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.5rem; margin-bottom: 2.5rem;
+    }
+    @media(max-width: 640px) { .mcgs-compare { grid-template-columns: 1fr; } }
+    .method-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.75rem;
+    }
+    .method-card.highlight { border-color: var(--primary); box-shadow: 0 0 24px var(--pglow); }
+    .method-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 1rem; margin-bottom: .75rem;
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .method-badge { font-size: .68rem; font-weight: 700; padding: .2rem .6rem; border-radius: 99px; }
+    .mb-bad { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+    .mb-good { background: rgba(6,182,212,.15); color: var(--primary); border: 1px solid rgba(6,182,212,.3); }
+    .method-points { list-style: none; }
+    .method-points li {
+      font-size: .85rem; color: var(--muted);
+      padding: .3rem 0; display: flex; align-items: flex-start; gap: .5rem;
+    }
+    .method-points li::before { content: '→'; color: var(--faint); flex-shrink: 0; margin-top: .02em; }
+    .method-points li.good::before { content: '✓'; color: var(--emerald); }
+    .method-points li.bad::before  { content: '✗'; color: var(--red); }
+
+    .mcgs-formula {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.75rem 2rem;
+      margin-bottom: 2rem; overflow-x: auto;
+    }
+    .mcgs-formula h4 { font-size: .82rem; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: .07em; }
+
+    /* ─── RESULTS ────────────────────────────────── */
+    .charts-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem; margin-bottom: 2.5rem;
+    }
+    .chart-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem;
+    }
+    .chart-card h4 {
+      font-size: .82rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 1rem;
+    }
+    canvas.result-chart { width: 100% !important; }
+
+    /* ─── RESULTS TABLE ──────────────────────────── */
+    .results-table-wrap {
+      overflow-x: auto;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    table.results-table {
+      width: 100%; border-collapse: collapse;
+      font-size: .85rem;
+    }
+    .results-table th {
+      padding: .85rem 1.25rem;
+      background: var(--card2); color: var(--muted);
+      font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .results-table td {
+      padding: .75rem 1.25rem;
+      border-bottom: 1px solid rgba(37,48,69,.6);
+      color: var(--text);
+    }
+    .results-table tr:last-child td { border-bottom: none; }
+    .results-table tr:hover td { background: rgba(6,182,212,.04); }
+    .results-table .best { color: var(--primary); font-weight: 600; }
+    .results-table .algo-name-cell { font-weight: 500; }
+    .results-table .method-cell { font-family: var(--mono); font-size: .78rem; }
+    .results-table .group-header td {
+      background: var(--bg3); color: var(--muted);
+      font-size: .75rem; font-weight: 600; letter-spacing: .04em;
+      padding: .5rem 1.25rem;
+    }
+    .sr-pill {
+      display: inline-block; padding: .1rem .55rem;
+      border-radius: 99px; font-size: .72rem; font-weight: 600;
+    }
+    .sr-high { background: rgba(16,185,129,.15); color: var(--emerald); border: 1px solid rgba(16,185,129,.3); }
+    .sr-perfect { background: rgba(6,182,212,.15); color: var(--primary); border: 1px solid rgba(6,182,212,.3); }
+
+    /* ─── PARADIGMS TABS ─────────────────────────── */
+    .tab-row {
+      display: flex; flex-wrap: wrap; gap: .5rem;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: .45rem 1rem; border-radius: 8px;
+      border: 1px solid var(--border); background: none;
+      color: var(--muted); font-size: .82rem; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      transition: all .2s;
+    }
+    .tab-btn.active { background: rgba(6,182,212,.15); border-color: var(--primary); color: var(--primary); }
+    .tab-btn:not(.active):hover { border-color: var(--faint); color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .paradigm-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem;
+    }
+    .paradigm-header {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .paradigm-badge {
+      font-size: .72rem; font-weight: 700; padding: .25rem .8rem;
+      border-radius: 99px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .pb-precond { background: rgba(20,184,166,.15); color: var(--teal); border: 1px solid rgba(20,184,166,.3); }
+    .pb-project  { background: rgba(168,85,247,.15); color: var(--violet); border: 1px solid rgba(168,85,247,.3); }
+    .pb-solve    { background: rgba(34,211,238,.15); color: var(--cyan); border: 1px solid rgba(34,211,238,.3); }
+    .pb-newton   { background: rgba(139,91,246,.15); color: var(--secondary); border: 1px solid rgba(139,91,246,.3); }
+    .paradigm-desc { color: var(--muted); font-size: .9rem; margin-bottom: 1.25rem; line-height: 1.6; }
+
+    /* ─── GENERALIZATION ─────────────────────────── */
+    .gen-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.5rem; align-items: start;
+    }
+    @media(max-width: 640px) { .gen-grid { grid-template-columns: 1fr; } }
+    .gen-table-wrap {
+      overflow-x: auto;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    /* ─── BIBTEX ─────────────────────────────────── */
+    .bibtex-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+      font-family: var(--mono); font-size: .82rem;
+      line-height: 1.7; overflow-x: auto;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute; top: .75rem; right: .75rem;
+      background: var(--card2); border: 1px solid var(--border);
+      color: var(--muted); font-size: .72rem; font-weight: 600;
+      padding: .3rem .8rem; border-radius: 6px;
+      cursor: pointer; font-family: inherit;
+      transition: all .2s;
+    }
+    .copy-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .bib-key { color: var(--primary2); }
+    .bib-field { color: var(--amber); }
+    .bib-val  { color: var(--emerald); }
+
+    /* ─── FOOTER ─────────────────────────────────── */
+    footer {
+      background: var(--bg); border-top: 1px solid var(--border);
+      padding: 2rem 1.5rem; text-align: center;
+      font-size: .8rem; color: var(--faint);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--primary); }
+
+    /* ─── UTILITY ────────────────────────────────── */
+    .divider {
+      height: 1px; background: var(--border);
+      margin: 2.5rem 0;
+    }
+    .mt1 { margin-top: 1rem; }
+    .mt2 { margin-top: 1.5rem; }
+    .mt3 { margin-top: 2.5rem; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+
+    /* ─── SCROLL REVEAL ──────────────────────────── */
+    .reveal {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ─── MATH DISPLAY ───────────────────────────── */
+    .math-block {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.25rem 1.5rem;
+      overflow-x: auto; margin: .75rem 0;
+      font-size: 1rem;
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────────── */
+    @media(max-width: 768px) {
+      .abstract-card { padding: 1.5rem; }
+      .btn-row { gap: .5rem; }
+      .btn { font-size: .8rem; padding: .5rem 1rem; }
+    }
+    @media(max-width: 480px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════ NAV ════════════════════════════════ -->
+<nav>
+  <a href="#hero" class="nav-brand">RL4RLA</a>
+  <div class="nav-links">
+    <a href="#abstract">Abstract</a>
+    <a href="#framework">Framework</a>
+    <a href="#curriculum">Curriculum</a>
+    <a href="#mcgs">MCGS</a>
+    <a href="#results">Results</a>
+    <a href="#bibtex">BibTeX</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════════ -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+
+  <div class="hero-badge">
+    <i class="fa-solid fa-award"></i>
+    ICML 2026
+  </div>
+
+  <h1 class="hero-title">
+    <span class="hl-cyan">RL4RLA</span>: Teaching ML to Discover<br>
+    <span class="hl-teal">Randomized Linear Algebra</span> Algorithms<br>
+    Through <span class="hl-purple">Curriculum Design</span> &amp; Graph-Based Search
+  </h1>
+
+  <p class="hero-subtitle">
+    An RL framework that automatically discovers interpretable, symbolic RLA algorithms
+    from first principles—no pretrained priors, no black-box outputs.
+  </p>
+
+  <div class="authors-block">
+    <div class="authors-line">
+      <a class="author-link" href="#">Jinglong Xiong</a><sup class="equal-note">*</sup>,&nbsp;
+      <a class="author-link" href="#">Xiaotian Liu</a><sup class="equal-note">*</sup>,&nbsp;
+      <a class="author-link" href="#">Ruoxin Wang</a>,&nbsp;
+      <a class="author-link" href="#">Zihang Liu</a>,&nbsp;
+      <a class="author-link" href="#">Yefan Zhou</a>,&nbsp;
+      <a class="author-link" href="#">Yujun Yan</a>,&nbsp;
+      <a class="author-link" href="#">Yaoqing Yang</a>
+    </div>
+    <div class="affil-badges">
+      <span class="affil-badge duke">Pratt School of Engineering, Duke University</span>
+      <span class="affil-badge dartmouth">Department of Computer Science, Dartmouth College</span>
+    </div>
+    <div style="margin-top:.5rem;font-size:.74rem;color:var(--muted);">
+      <sup style="color:var(--amber);">*</sup>Equal contribution &nbsp;·&nbsp; Corresponding: Yaoqing Yang
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <a href="https://github.com/Tim-Xiong/RL4RLA" target="_blank" class="btn btn-primary">
+      <i class="fa-brands fa-github"></i> Code
+    </a>
+    <a href="https://arxiv.org/pdf/2605.18004" target="_blank" class="btn btn-outline">
+      <i class="fa-solid fa-file-pdf"></i> Paper
+    </a>
+    <a href="https://arxiv.org/abs/2605.18004" target="_blank" class="btn btn-purple">
+      <i class="fa-solid fa-scroll"></i> arXiv
+    </a>
+    <a href="#bibtex" class="btn btn-outline">
+      <i class="fa-solid fa-quote-left"></i> BibTeX
+    </a>
+  </div>
+
+  <div class="venue-tag">
+    Published at <strong>ICML 2026</strong> &nbsp;·&nbsp; 43rd International Conference on Machine Learning
+  </div>
+</section>
+
+<!-- ═══════════════════════════ TEASER ═════════════════════════════ -->
+<section id="teaser">
+  <div class="container-lg">
+    <div class="stats-row">
+      <div class="stat-card reveal">
+        <div class="stat-number">4+</div>
+        <div class="stat-label">RLA paradigms rediscovered: Sketch-and-Precondition, Sketch-and-Project (Kaczmarz), Sketch-and-Solve, Newton Sketch; generalizes to eigenvalue problems</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">75–80%</div>
+        <div class="stat-label">End-to-end curriculum success rate across all linear-system targets</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">2–3×</div>
+        <div class="stat-label">Search cost reduction via Monte Carlo Graph Search over standard MCTS</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">Newton Sketch discovery success — only full curriculum achieves it; all baselines fail</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ ABSTRACT ═══════════════════════════ -->
+<section id="abstract">
+  <div class="container-md">
+    <div class="section-tag">Abstract</div>
+    <h2 class="sec-title">What is RL4RLA?</h2>
+
+    <div class="abstract-card reveal">
+      <p class="abstract-text">
+        Randomized linear algebra (RLA) algorithms are a modern class of numerical linear algebra techniques
+        that play an essential role in scientific computing and machine learning, with broad and growing adoption.
+        However, their discovery remains mostly a manual process that requires deep expert knowledge and inspiration.
+        While Reinforcement Learning (RL) offers a pathway to automation, standard approaches struggle with
+        <mark>sparse reward landscapes</mark> and <mark>vast search spaces</mark> inherent to high-performing RLA algorithms.
+      </p>
+      <br>
+      <p class="abstract-text">
+        In this paper, we present <strong>RL4RLA</strong>, a general RL framework that automates the discovery of
+        <mark>interpretable, symbolic RLA algorithms</mark>. Unlike black-box approaches, our method builds explicit algorithms
+        from basic linear algebra primitives, ensuring verifiable and implementable representations.
+        To enable efficient discovery, we introduce:
+      </p>
+      <ol style="margin:1rem 0 1rem 1.5rem;display:flex;flex-direction:column;gap:.6rem;">
+        <li class="abstract-text">
+          A <mark>numerical curriculum</mark> that progressively increments problem difficulty to encode
+          inductive bias specific to the RLA domain.
+        </li>
+        <li class="abstract-text">
+          <mark>Monte Carlo Graph Search</mark>, which optimizes exploration by identifying and merging
+          equivalent partial algorithms.
+        </li>
+      </ol>
+      <p class="abstract-text">
+        We demonstrate that RL4RLA rediscovers state-of-the-art methods, including
+        sketch-and-precondition solvers, Randomized Kaczmarz, and Newton Sketch, and can be targeted to produce
+        algorithms optimized for specific trade-offs between accuracy, speed, and stability.
+        Code is available at <a href="https://github.com/Tim-Xiong/RL4RLA" target="_blank" style="color:var(--primary);">github.com/Tim-Xiong/RL4RLA</a>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FRAMEWORK ══════════════════════════ -->
+<section id="framework">
+  <div class="container-lg">
+    <div class="section-tag">Framework</div>
+    <h2 class="sec-title">The RL4RLA Pipeline</h2>
+    <p class="sec-lead">
+      RL4RLA frames algorithm discovery as building symbolic programs from linear-algebra primitives.
+      Four components work together to make discovery tractable.
+    </p>
+
+    <!-- Pipeline figure (from paper) -->
+    <div class="reveal" style="margin-bottom:2.5rem;">
+      <figure>
+        <img src="static/images/pipeline.png"
+             alt="Overview of the RL4RLA framework"
+             style="width:100%;border-radius:12px;border:1px solid var(--border);background:#fff;">
+        <figcaption class="fig-caption" style="margin-top:1rem;">
+          <strong>Figure 1: Overview of the RL4RLA framework</strong>, illustrated with the curriculum transition
+          from Least Square Gradient Descent to Subsampled Least Square Gradient Descent.
+          <strong>Top:</strong> At each curriculum stage, the search is initialized with a base algorithm and a problem environment
+          (matrix properties, operator set, typed variables). The target algorithm is defined by augmenting the current algorithm.
+          <strong>Bottom:</strong> Algorithm discovery is performed by Monte Carlo Graph Search. Each iteration selects actions via
+          UCD, expands the partial algorithm by inserting operators, evaluates candidate algorithms through simulation reward
+          computation, and backpropagates value estimates to update Q-values and visit counts. After each iteration, a LUCB-based
+          criterion determines whether the current curriculum stage has been successfully completed.
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- Contribution cards -->
+    <div class="contrib-grid">
+      <div class="contrib-card c1 reveal">
+        <div class="contrib-icon ci1"><i class="fa-solid fa-code"></i></div>
+        <h3>Symbolic Algorithm Representation</h3>
+        <p>
+          Each candidate algorithm is an explicit symbolic program
+          $\mathcal{A} = (\mathcal{P}_{\text{setup}}, \mathcal{P}_{\text{iteration}})$
+          built from typed linear-algebra primitives
+          (<span style="font-family:var(--mono);color:var(--primary2)">SKETCH</span>,
+          <span style="font-family:var(--mono);color:var(--primary2)">HHQR</span>,
+          <span style="font-family:var(--mono);color:var(--primary2)">MATVEC</span>,
+          <span style="font-family:var(--mono);color:var(--primary2)">INV</span>, …).
+          Programs are directly executable and human-inspectable.
+        </p>
+      </div>
+      <div class="contrib-card c2 reveal">
+        <div class="contrib-icon ci2"><i class="fa-solid fa-stairs"></i></div>
+        <h3>Curriculum-Guided Discovery</h3>
+        <p>
+          A sequence of staged refinements progressively increases problem difficulty.
+          Each stage introduces exactly one failure mode (ill-conditioning, non-square, high-leverage)
+          resolved by one new algorithmic component. Deep search becomes a chain of shallow problems.
+        </p>
+      </div>
+      <div class="contrib-card c3 reveal">
+        <div class="contrib-icon ci3"><i class="fa-solid fa-share-nodes"></i></div>
+        <h3>Monte Carlo Graph Search</h3>
+        <p>
+          MCGS operates on a DAG rather than a tree, merging equivalent partial algorithms reached via
+          different action orderings. This reduces growth from $O(b^d)$ tree nodes to $O(|\mathcal{S}|)$
+          unique states, achieving 2–3× search cost reduction.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ ALGORITHM TREE ═════════════════════ -->
+<section id="alg-tree-section">
+  <div class="container-lg">
+    <div class="section-tag">Discovery Landscape</div>
+    <h2 class="sec-title">Algorithm Tree</h2>
+    <p class="sec-lead">
+      Starting from an empty program, RL4RLA navigates a DAG of increasingly sophisticated RLA algorithms.
+      Hover over nodes to learn about each method.
+    </p>
+
+    <div id="alg-tree-wrapper" class="reveal">
+      <svg id="alg-tree" viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+          </marker>
+        </defs>
+
+        <!-- Edges -->
+        <!-- empty → land -->
+        <line x1="62" y1="110" x2="148" y2="88" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- empty → gd -->
+        <line x1="62" y1="130" x2="148" y2="245" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- land → lsgd -->
+        <line x1="232" y1="82" x2="318" y2="82" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- lsgd → brk -->
+        <line x1="402" y1="75" x2="468" y2="52" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- lsgd → pgd -->
+        <line x1="402" y1="82" x2="468" y2="118" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- lsgd → sub_lsgd -->
+        <line x1="402" y1="90" x2="468" y2="188" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- pgd → sk_pgd -->
+        <line x1="556" y1="112" x2="620" y2="90" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- pgd → sub_pgd -->
+        <line x1="556" y1="125" x2="620" y2="160" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- sk_pgd → pwsgd -->
+        <line x1="714" y1="82" x2="786" y2="82" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- gd → newton -->
+        <line x1="232" y1="250" x2="318" y2="250" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- newton → nsketch -->
+        <line x1="402" y1="250" x2="468" y2="250" stroke="#374151" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Empty node -->
+        <g class="tree-node" data-info="Starting point: empty program with no operations.">
+          <rect x="4" y="100" width="58" height="32" rx="6" fill="#1e293b" stroke="#374151" stroke-width="1.2"/>
+          <text x="33" y="121" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-family="Space Grotesk, sans-serif" font-weight="500">Empty</text>
+        </g>
+
+        <!-- Base nodes (gray) -->
+        <!-- Landweber -->
+        <g class="tree-node" data-info="Landweber Iteration: x_{t+1} = x_t - η(Ax_t - b). Works on small, well-conditioned systems.">
+          <rect x="148" y="68" width="84" height="30" rx="6" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="190" y="80" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Landweber</text>
+          <text x="190" y="92" text-anchor="middle" fill="#64748b" font-size="8.5" font-family="Space Grotesk, sans-serif">Iteration</text>
+        </g>
+        <!-- LS GD -->
+        <g class="tree-node" data-info="Least Squares GD: x_{t+1} = x_t - ηA^T(Ax_t - b). Handles rectangular systems.">
+          <rect x="318" y="68" width="84" height="30" rx="6" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="360" y="80" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Least Square</text>
+          <text x="360" y="92" text-anchor="middle" fill="#64748b" font-size="8.5" font-family="Space Grotesk, sans-serif">GD</text>
+        </g>
+        <!-- PGD -->
+        <g class="tree-node" data-info="Preconditioned GD: Uses RR^T as preconditioner via A = QR^{-1}. Handles ill-conditioning.">
+          <rect x="468" y="105" width="88" height="30" rx="6" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="512" y="117" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Preconditioned</text>
+          <text x="512" y="129" text-anchor="middle" fill="#64748b" font-size="8.5" font-family="Space Grotesk, sans-serif">GD</text>
+        </g>
+        <!-- GD -->
+        <g class="tree-node" data-info="Gradient Descent on the normal equations: x_{t+1} = x_t - ηA^T(Ax_t - b).">
+          <rect x="148" y="236" width="84" height="30" rx="6" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="190" y="254" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Gradient</text>
+          <text x="190" y="266" text-anchor="middle" fill="#64748b" font-size="8.5" font-family="Space Grotesk, sans-serif">Descent</text>
+        </g>
+        <!-- Full Newton -->
+        <g class="tree-node" data-info="Full Newton method: uses exact Hessian H_t = A^T D_t A. O(mn^2) cost.">
+          <rect x="318" y="236" width="84" height="30" rx="6" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="360" y="254" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Full Newton</text>
+          <text x="360" y="266" text-anchor="middle" fill="#64748b" font-size="8.5" font-family="Space Grotesk, sans-serif">Method</text>
+        </g>
+
+        <!-- Sketch-and-Project (violet) -->
+        <!-- BRK -->
+        <g class="tree-node" data-info="Block Randomized Kaczmarz (Sketch-and-Project): x_{t+1} = argmin ||x-x_t||^2 s.t. S_t Ax = S_t b">
+          <rect x="468" y="36" width="88" height="30" rx="6" fill="#2d1b4e" stroke="#7c3aed" stroke-width="1.2"/>
+          <text x="512" y="48" text-anchor="middle" fill="#c4b5fd" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Block Rand.</text>
+          <text x="512" y="60" text-anchor="middle" fill="#a78bfa" font-size="8.5" font-family="Space Grotesk, sans-serif">Kaczmarz</text>
+        </g>
+
+        <!-- Sketch-and-Solve (cyan) -->
+        <!-- Sub LS GD -->
+        <g class="tree-node" data-info="Subsampled Least Squares GD (Sketch-and-Solve): directly solves sketched least-squares problem x̃ = argmin ||SAx - Sb||^2">
+          <rect x="468" y="175" width="88" height="30" rx="6" fill="#0c2a3a" stroke="#0891b2" stroke-width="1.2"/>
+          <text x="512" y="187" text-anchor="middle" fill="#67e8f9" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Subsampled</text>
+          <text x="512" y="199" text-anchor="middle" fill="#22d3ee" font-size="8.5" font-family="Space Grotesk, sans-serif">LS GD</text>
+        </g>
+        <!-- Sub PGD -->
+        <g class="tree-node" data-info="Subsampled Preconditioned GD: combines preconditioning with stochastic row sampling.">
+          <rect x="620" y="148" width="88" height="30" rx="6" fill="#0c2a3a" stroke="#0891b2" stroke-width="1.2"/>
+          <text x="664" y="160" text-anchor="middle" fill="#67e8f9" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Subsampled</text>
+          <text x="664" y="172" text-anchor="middle" fill="#22d3ee" font-size="8.5" font-family="Space Grotesk, sans-serif">Precond. GD</text>
+        </g>
+
+        <!-- Sketch-and-Precondition (teal) -->
+        <!-- Sketched PGD -->
+        <g class="tree-node" data-info="Sketched Preconditioned GD: uses SA = QR^{-1} for cheap sketched preconditioning. Recovers Blendenpik idea.">
+          <rect x="620" y="68" width="94" height="30" rx="6" fill="#0d2b28" stroke="#0d9488" stroke-width="1.2"/>
+          <text x="667" y="80" text-anchor="middle" fill="#5eead4" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Sketched</text>
+          <text x="667" y="92" text-anchor="middle" fill="#2dd4bf" font-size="8.5" font-family="Space Grotesk, sans-serif">Precond. GD</text>
+        </g>
+        <!-- PW-SGD -->
+        <g class="tree-node" data-info="Preconditioned Weighted SGD: leverage-score row sampling with sketched preconditioning. Full state-of-the-art method.">
+          <rect x="786" y="68" width="100" height="30" rx="6" fill="#0d2b28" stroke="#0d9488" stroke-width="1.5"/>
+          <text x="836" y="80" text-anchor="middle" fill="#5eead4" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="600">Precond.</text>
+          <text x="836" y="92" text-anchor="middle" fill="#2dd4bf" font-size="8.5" font-family="Space Grotesk, sans-serif">Weighted SGD</text>
+        </g>
+
+        <!-- Newton Sketch (purple) -->
+        <g class="tree-node" data-info="Newton Sketch: approximates Hessian H_t = A^T D_t A via sketching Ĥ_t = (SD_t^{1/2}A)^T(SD_t^{1/2}A). Reduces O(mn^2) to O(smn).">
+          <rect x="468" y="236" width="88" height="30" rx="6" fill="#1e1a3a" stroke="#7c3aed" stroke-width="1.2"/>
+          <text x="512" y="248" text-anchor="middle" fill="#c4b5fd" font-size="9" font-family="Space Grotesk, sans-serif" font-weight="500">Newton</text>
+          <text x="512" y="260" text-anchor="middle" fill="#a78bfa" font-size="8.5" font-family="Space Grotesk, sans-serif">Sketch</text>
+        </g>
+
+        <!-- Legend -->
+        <g transform="translate(0, 288)">
+          <rect x="148" y="0" width="10" height="10" rx="2" fill="#1e2d3d" stroke="#374151" stroke-width="1.2"/>
+          <text x="162" y="9.5" fill="#64748b" font-size="8.5" font-family="Inter, sans-serif">Base</text>
+          <rect x="210" y="0" width="10" height="10" rx="2" fill="#0d2b28" stroke="#0d9488" stroke-width="1.2"/>
+          <text x="224" y="9.5" fill="#64748b" font-size="8.5" font-family="Inter, sans-serif">Sketch &amp; Precondition</text>
+          <rect x="360" y="0" width="10" height="10" rx="2" fill="#2d1b4e" stroke="#7c3aed" stroke-width="1.2"/>
+          <text x="374" y="9.5" fill="#64748b" font-size="8.5" font-family="Inter, sans-serif">Sketch &amp; Project</text>
+          <rect x="490" y="0" width="10" height="10" rx="2" fill="#0c2a3a" stroke="#0891b2" stroke-width="1.2"/>
+          <text x="504" y="9.5" fill="#64748b" font-size="8.5" font-family="Inter, sans-serif">Sketch &amp; Solve</text>
+          <rect x="620" y="0" width="10" height="10" rx="2" fill="#1e1a3a" stroke="#7c3aed" stroke-width="1.2"/>
+          <text x="634" y="9.5" fill="#64748b" font-size="8.5" font-family="Inter, sans-serif">Newton</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tree-tooltip" style="
+      display:none; position:fixed; z-index:200;
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:10px; padding:.75rem 1rem;
+      font-size:.8rem; color:var(--text); max-width:280px;
+      pointer-events:none; box-shadow:0 8px 32px rgba(0,0,0,.4);
+    "></div>
+
+    <!-- Discovered paradigms tabs -->
+    <div class="mt3 reveal">
+      <div class="section-tag">Discovered Algorithms</div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:600;margin-bottom:1rem;">Four RLA Paradigms</h3>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('paradigms','precond',this)">Sketch-and-Precondition</button>
+        <button class="tab-btn" onclick="switchTab('paradigms','project',this)">Sketch-and-Project</button>
+        <button class="tab-btn" onclick="switchTab('paradigms','solve',this)">Sketch-and-Solve</button>
+        <button class="tab-btn" onclick="switchTab('paradigms','newton',this)">Newton Sketch</button>
+      </div>
+
+      <div id="paradigms-precond" class="tab-panel active">
+        <div class="paradigm-card">
+          <div class="paradigm-header">
+            <span class="paradigm-badge pb-precond">Sketch-and-Precondition</span>
+          </div>
+          <p class="paradigm-desc">
+            Constructs a cheap randomized preconditioner from a sketched version of $A$.
+            Given $Ax=b$, a sketching operator $S \in \mathbb{R}^{s \times m}$ yields
+            $SA = QR^{-1}$ such that $\kappa(AR) = \mathcal{O}(1)$, enabling fast preconditioned gradient updates.
+            Recovers the core idea behind <strong>Blendenpik</strong> and <strong>LSRN</strong>.
+          </p>
+          <div class="algo-block">
+            <div><span class="comment">// Setup (once)</span></div>
+            <div>R₁ ← <span class="kw">Sketch</span>(A)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// apply sketching matrix</span></div>
+            <div>R₁ ← <span class="kw">QR</span>(R₁ · A)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// compute QR of SA</span></div>
+            <div>R₁ ← <span class="kw">Inv</span>(R₁)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// invert R factor</span></div>
+            <div>R₁ ← R₁ · R₁ᵀ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// form preconditioner</span></div>
+            <br>
+            <div><span class="comment">// Iteration</span></div>
+            <div>v₁ ← <span class="kw">MatVec</span>(A, xₜ)&nbsp;&nbsp;&nbsp;<span class="comment">// Axₜ</span></div>
+            <div>v₁ ← v₁ − b</div>
+            <div>v₁ ← Aᵀ · v₁&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Aᵀ(Axₜ − b)</span></div>
+            <div>v₁ ← R₁ · v₁&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// apply preconditioner</span></div>
+            <div>xₜ₊₁ ← xₜ − <span class="op">η</span> · v₁</div>
+          </div>
+          <span class="algo-name">Recovers: Sketched Preconditioned Gradient Descent (Blendenpik)</span>
+        </div>
+      </div>
+
+      <div id="paradigms-project" class="tab-panel">
+        <div class="paradigm-card">
+          <div class="paradigm-header">
+            <span class="paradigm-badge pb-project">Sketch-and-Project</span>
+          </div>
+          <p class="paradigm-desc">
+            Updates iterates by projecting onto randomly sketched subsystems.
+            At each step, solves a small projected problem:
+            $x_{t+1} = \arg\min_x \|x-x_t\|^2 \text{ s.t. } S_t Ax = S_t b$.
+            Recovers <strong>Randomized Kaczmarz</strong> (single-row) and
+            <strong>Block Randomized Kaczmarz</strong> (multi-row sketch).
+          </p>
+          <div class="algo-block">
+            <div><span class="comment">// Iteration (no setup phase needed)</span></div>
+            <div>Sₜ ← <span class="kw">Sample</span>(rows of A, b)&nbsp;&nbsp;<span class="comment">// sketch matrix</span></div>
+            <div>r  ← Sₜ·A·xₜ − Sₜ·b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// sketched residual</span></div>
+            <div>xₜ₊₁ ← xₜ − (SₜA)ᵀ · <span class="kw">Inv</span>((SₜA)(SₜA)ᵀ) · r</div>
+            <br>
+            <div><span class="comment">// Equivalent to projecting onto S_t Ax = S_t b</span></div>
+          </div>
+          <span class="algo-name">Recovers: Block Randomized Kaczmarz</span>
+        </div>
+      </div>
+
+      <div id="paradigms-solve" class="tab-panel">
+        <div class="paradigm-card">
+          <div class="paradigm-header">
+            <span class="paradigm-badge pb-solve">Sketch-and-Solve</span>
+          </div>
+          <p class="paradigm-desc">
+            Directly solves a sketched least-squares problem:
+            $\tilde{x} = \arg\min_x \|SAx - Sb\|^2$.
+            Discovered on large overdetermined systems when edit distance is small,
+            reducing complexity while preserving accuracy.
+          </p>
+          <div class="algo-block">
+            <div><span class="comment">// One-shot solve</span></div>
+            <div>S  ← <span class="kw">Sketch</span>(A, b)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// draw random sketch</span></div>
+            <div>Â  ← S · A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// reduced system: s×n</span></div>
+            <div>b̂  ← S · b</div>
+            <div>x̃  ← <span class="kw">LeastSquares</span>(Â, b̂)&nbsp;&nbsp;&nbsp;<span class="comment">// solve sketched LS</span></div>
+          </div>
+          <span class="algo-name">Recovers: Subsampled Least Squares GD</span>
+        </div>
+      </div>
+
+      <div id="paradigms-newton" class="tab-panel">
+        <div class="paradigm-card">
+          <div class="paradigm-header">
+            <span class="paradigm-badge pb-newton">Newton Sketch</span>
+          </div>
+          <p class="paradigm-desc">
+            Approximates the Hessian $H_t = A^\top D_t A$ via sketching:
+            $\hat{H}_t = (SD_t^{1/2}A)^\top (SD_t^{1/2}A)$,
+            reducing complexity from $O(mn^2)$ to $O(smn)$ while maintaining
+            superlinear convergence. Applied to logistic regression.
+            <strong>Only the full curriculum achieves 100% success</strong>; all partial curricula fail.
+          </p>
+          <div class="algo-block">
+            <div><span class="comment">// Iteration (logistic regression)</span></div>
+            <div>Dₜ ← <span class="kw">Diag</span>(σ′(Axₜ))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// logistic weights</span></div>
+            <div>S  ← <span class="kw">Sketch</span>(Dₜ^{1/2}·A)&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// sketch weighted A</span></div>
+            <div>Ĥₜ ← Sᵀ · S&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// approximate Hessian</span></div>
+            <div>gₜ ← Aᵀ · (σ(Axₜ) − y)&nbsp;&nbsp;<span class="comment">// gradient</span></div>
+            <div>xₜ₊₁ ← xₜ − Ĥₜ⁻¹ · gₜ&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Newton step</span></div>
+          </div>
+          <span class="algo-name">Recovers: Newton Sketch (Pilanci &amp; Wainwright 2017)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CURRICULUM ═════════════════════════ -->
+<section id="curriculum">
+  <div class="container-lg">
+    <div class="section-tag">Curriculum Design</div>
+    <h2 class="sec-title">Progressive Difficulty Staging</h2>
+    <p class="sec-lead">
+      Deep algorithmic search is decomposed into shallow staged refinements.
+      Each stage introduces one failure mode resolved by one new component.
+      Click a stage to explore the progression.
+    </p>
+
+    <div class="curriculum-outer reveal">
+      <!-- Stage navigation -->
+      <div class="stage-nav">
+        <button class="stage-btn active" onclick="switchStage(0)">
+          <span class="stage-num">0</span>
+          Landweber Iteration
+        </button>
+        <button class="stage-btn" onclick="switchStage(1)">
+          <span class="stage-num">1</span>
+          Gradient Descent
+        </button>
+        <button class="stage-btn" onclick="switchStage(2)">
+          <span class="stage-num">2</span>
+          Preconditioned GD
+        </button>
+        <button class="stage-btn" onclick="switchStage(3)">
+          <span class="stage-num">3</span>
+          Sketched Precond. GD
+        </button>
+        <button class="stage-btn" onclick="switchStage(4)">
+          <span class="stage-num">4</span>
+          Uniform Subsampling
+        </button>
+        <button class="stage-btn" onclick="switchStage(5)">
+          <span class="stage-num">5</span>
+          Leverage-Score SGD
+        </button>
+      </div>
+
+      <!-- Stage panels -->
+      <div>
+        <!-- Stage 0 -->
+        <div class="stage-panel active" id="stage-0">
+          <div class="stage-title">
+            Stage 0: Landweber Iteration
+            <span class="stage-badge new-algo">Base</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">$5 \times 5$, well-conditioned $(\kappa \approx 2)$</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">None — base case</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> (Ax_t &minus; b)</div>
+          </div>
+          <span class="algo-name">✓ Fixed-point / Landweber iteration</span>
+        </div>
+
+        <!-- Stage 1 -->
+        <div class="stage-panel" id="stage-1">
+          <div class="stage-title">
+            Stage 1: Gradient Descent
+            <span class="stage-badge new-algo">+AᵀA term</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">$m \times n$ rectangular system</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">Non-square system — need normal equations</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> A<sup>T</sup>(Ax_t &minus; b)</div>
+          </div>
+          <span class="algo-name">✓ Gradient Descent via normal equations</span>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="stage-panel" id="stage-2">
+          <div class="stage-title">
+            Stage 2: Preconditioned GD
+            <span class="stage-badge new-algo">+Preconditioning</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">$10000 \times 50$, ill-conditioned $(\kappa \gg 1)$</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">Slow convergence due to high condition number</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="comment">// Compute once: A = QR⁻¹</span></div>
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> RR<sup>T</sup>A<sup>T</sup>(Ax_t &minus; b)</div>
+          </div>
+          <span class="algo-name">✓ Preconditioned GD (exact QR)</span>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="stage-panel" id="stage-3">
+          <div class="stage-title">
+            Stage 3: Sketched Preconditioned GD
+            <span class="stage-badge new-algo">+Sketching</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">Same, higher complexity penalty $w_{\text{comp}}$</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">Full QR factorization too expensive</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="comment">// Cheap sketch: SA = QR⁻¹</span></div>
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> RR<sup>T</sup>A<sup>T</sup>(Ax_t &minus; b)</div>
+          </div>
+          <span class="algo-name">✓ Sketched Preconditioned GD ≈ Blendenpik</span>
+        </div>
+
+        <!-- Stage 4 -->
+        <div class="stage-panel" id="stage-4">
+          <div class="stage-title">
+            Stage 4: Uniform Row Subsampling
+            <span class="stage-badge new-algo">+Stochasticity</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">Same setup, uniform distribution</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">Full-batch gradient inefficient per iteration</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="comment">// Sₜ: uniform row sampling per iteration</span></div>
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> RR<sup>T</sup>(S<sub>t</sub>A)<sup>T</sup>(S<sub>t</sub>Ax_t &minus; S<sub>t</sub>b)</div>
+          </div>
+          <span class="algo-name">✓ Stochastic Preconditioned GD (uniform sampling)</span>
+        </div>
+
+        <!-- Stage 5 -->
+        <div class="stage-panel" id="stage-5">
+          <div class="stage-title">
+            Stage 5: Leverage-Score SGD
+            <span class="stage-badge new-algo">+Importance Sampling</span>
+          </div>
+          <div class="info-row">
+            <div class="info-box">
+              <div class="info-box-label">Problem Setup</div>
+              <div class="setup">Heavy-tailed $U$ in $A = U\Lambda V^\top$ (non-uniform leverage)</div>
+            </div>
+            <div class="info-box">
+              <div class="info-box-label">Failure Mode</div>
+              <div class="fail">Uniform sampling suboptimal for skewed leverage scores</div>
+            </div>
+          </div>
+          <div class="algo-block">
+            <div><span class="comment">// Sₜ: ℓ₂ row-norm (leverage-score) sampling</span></div>
+            <div><span class="kw">x</span>_{t+1} = x_t &minus; <span class="op">η</span> RR<sup>T</sup>(S<sub>t</sub>A)<sup>T</sup>(S<sub>t</sub>Ax_t &minus; S<sub>t</sub>b)</div>
+          </div>
+          <span class="algo-name">✓ Preconditioned Weighted SGD (leverage-score sampling)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Curriculum insight box -->
+    <div class="mt3 reveal" style="
+      background:var(--card); border:1px solid var(--border); border-radius:14px;
+      padding:1.5rem 2rem; display:flex; gap:1.25rem; align-items:flex-start;
+    ">
+      <i class="fa-solid fa-lightbulb" style="color:var(--amber);font-size:1.4rem;margin-top:.1rem;flex-shrink:0;"></i>
+      <div>
+        <strong style="font-size:.95rem;">Key Insight:</strong>
+        <span style="color:var(--muted);font-size:.9rem;">
+          Decomposing the search for a <strong style="color:var(--text);">6-component algorithm</strong>
+          into 5 shallow transitions transforms a globally sparse program space into a
+          sequence of locally solvable refinements. Each stage introduces exactly one failure mode,
+          keeping the reward landscape locally informative and the search horizon tractable.
+          Once a correct base algorithm is provided, subsequent transitions become
+          <strong style="color:var(--emerald);">nearly deterministic (≥95–100% success)</strong>.
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ MCGS ════════════════════════════════ -->
+<section id="mcgs">
+  <div class="container-lg">
+    <div class="section-tag">Search Method</div>
+    <h2 class="sec-title">Monte Carlo Graph Search</h2>
+    <p class="sec-lead">
+      Standard MCTS treats the search space as a tree, causing exponential redundancy.
+      MCGS merges equivalent states into a DAG, dramatically reducing search cost.
+    </p>
+
+    <div class="mcgs-compare reveal">
+      <div class="method-card">
+        <div class="method-title">
+          MCTS (Tree Search)
+          <span class="method-badge mb-bad">Baseline</span>
+        </div>
+        <ul class="method-points">
+          <li class="bad">Tree grows $O(b^d)$ — exponential in depth</li>
+          <li class="bad">Equivalent partial programs re-explored as separate nodes</li>
+          <li class="bad">UCT assigns free bonuses to redundant nodes</li>
+          <li class="bad">Most compute wasted on re-generating seen programs</li>
+        </ul>
+      </div>
+      <div class="method-card highlight">
+        <div class="method-title">
+          MCGS (Graph Search)
+          <span class="method-badge mb-good">Ours</span>
+        </div>
+        <ul class="method-points">
+          <li class="good">DAG grows $O(|\mathcal{S}|)$ — only unique states</li>
+          <li class="good">Equivalent states merged by exact program normalization</li>
+          <li class="good">UCD action selection corrects for multi-parent nodes</li>
+          <li class="good">Revisit rate 50–58%: majority of compute refines known states</li>
+          <li class="good"><strong>2–3× total search cost reduction</strong> across all curricula</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Update equations -->
+    <div class="mcgs-formula reveal">
+      <h4>Backpropagation updates (shared across all paths to merged state $s$)</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:2rem;align-items:center;">
+        <div>
+          $$N(s,a) \leftarrow N(s,a) + 1$$
+        </div>
+        <div>
+          $$\hat{Q}(s,a) \leftarrow \hat{Q}(s,a) + \frac{R - \hat{Q}(s,a)}{N(s,a)}$$
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:.82rem;margin-top:.75rem;">
+        UCD action selection (corrects UCT's over-exploration on multi-parent nodes):
+      </p>
+      $$a' = \arg\max_{a \in \mathcal{A}(s)} \left[ \hat{Q}(s,a) + c \sqrt{\frac{\log N(s)}{N(s')}} \right]$$
+    </div>
+
+    <!-- Charts: Node growth + Revisit rate -->
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.8rem;color:#fcd34d;">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-right:.4rem;"></i>
+      <strong>Note:</strong> Charts below are qualitatively illustrative. Exact figures are in the <a href="https://arxiv.org/pdf/2605.18004" target="_blank" style="color:#fcd34d;">paper</a>.
+    </div>
+    <div class="charts-grid reveal">
+      <div class="chart-card">
+        <h4>Unique State Growth vs. Playouts</h4>
+        <canvas id="chart-nodes" class="result-chart" height="220"></canvas>
+        <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+          MCTS expands nearly linearly in playouts; MCGS grows substantially more slowly due to state merging.
+          (Block Randomized Kaczmarz curriculum; illustrative.)
+        </p>
+      </div>
+      <div class="chart-card">
+        <h4>Revisit Rate vs. Playouts</h4>
+        <canvas id="chart-revisit" class="result-chart" height="220"></canvas>
+        <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+          Revisit rate $1 - |S|/|V|$: MCGS sustains 0.50–0.58 (paper-reported range); MCTS stays near 0.
+          Higher revisit rate = greater reuse of shared states. (Illustrative.)
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ RESULTS ════════════════════════════ -->
+<section id="results">
+  <div class="container-lg">
+    <div class="section-tag">Experiments</div>
+    <h2 class="sec-title">Search Efficiency Results</h2>
+    <p class="sec-lead">
+      RL4RLA evaluated across five curricula. MCGS+UCD consistently achieves the lowest
+      playout cost and best wall-clock time while maintaining competitive success rates.
+    </p>
+
+    <!-- Total playouts bar chart -->
+    <div class="chart-card reveal" style="margin-bottom:2rem;">
+      <h4>Total Playouts to Complete Full Curriculum (lower is better)</h4>
+      <canvas id="chart-playouts" class="result-chart" height="160"></canvas>
+    </div>
+
+    <!-- Results table -->
+    <div class="results-table-wrap reveal">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Target Algorithm</th>
+            <th>Method</th>
+            <th>Total Playouts ↓</th>
+            <th>Time (s) ↓</th>
+            <th>Success Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- PW-SGD -->
+          <tr><td class="algo-name-cell" rowspan="3">Preconditioned Weighted SGD</td>
+              <td class="method-cell">MCTS</td><td>34,902</td><td>380.7</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <tr><td class="method-cell">MCGS+UCT</td><td>13,037</td><td>193.2</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <tr><td class="method-cell">MCGS+UCD</td><td class="best">10,721</td><td class="best">191.1</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <!-- BRK -->
+          <tr class="group-header"><td colspan="5">Block Randomized Kaczmarz</td></tr>
+          <tr><td class="algo-name-cell"></td>
+              <td class="method-cell">MCTS</td><td>66,468</td><td>468.0</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCT</td><td>38,469</td><td>307.8</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCD</td><td class="best">25,158</td><td class="best">205.0</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <!-- S-LS-GD -->
+          <tr class="group-header"><td colspan="5">Subsampled Least Square GD</td></tr>
+          <tr><td></td><td class="method-cell">MCTS</td><td>15,847</td><td>10.4</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCT</td><td>7,230</td><td class="best">8.3</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCD</td><td class="best">5,061</td><td>8.9</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <!-- S-P-GD -->
+          <tr class="group-header"><td colspan="5">Sketched Preconditioned GD</td></tr>
+          <tr><td></td><td class="method-cell">MCTS</td><td>17,655</td><td>142.9</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCT</td><td>8,030</td><td class="best">54.8</td>
+              <td><span class="sr-pill sr-high">80%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCD</td><td class="best">6,034</td><td>58.4</td>
+              <td><span class="sr-pill sr-high">75%</span></td></tr>
+          <!-- Newton Sketch -->
+          <tr class="group-header"><td colspan="5">Newton Sketch †</td></tr>
+          <tr><td></td><td class="method-cell">MCTS</td><td>2,557</td><td>5,949.6</td>
+              <td><span class="sr-pill sr-perfect">100%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCT</td><td>2,682</td><td>5,265.4</td>
+              <td><span class="sr-pill sr-perfect">100%</span></td></tr>
+          <tr><td></td><td class="method-cell">MCGS+UCD</td><td class="best">1,416</td><td class="best">4,480.9</td>
+              <td><span class="sr-pill sr-perfect">100%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.75rem;color:var(--faint);margin-top:.75rem;">
+      † Full four-stage curriculum required; all no-curriculum and partial-curriculum variants achieve 0% success.
+      20 runs per transition; LUCB early stopping.
+    </p>
+
+    <!-- ECDF figures / charts -->
+    <div class="mt3 reveal">
+      <div class="section-tag">Discovery Probability</div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:600;margin-bottom:.5rem;">
+        Empirical CDF of Playouts-to-Success
+      </h3>
+      <p style="color:var(--muted);font-size:.87rem;margin-bottom:1.5rem;">
+        As compositional depth increases, MCGS variants show pronounced advantages.
+        On shallow targets all methods are comparable; on deep targets MCGS+UCD leads significantly.
+      </p>
+    </div>
+
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.8rem;color:#fcd34d;">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-right:.4rem;"></i>
+      <strong>Note:</strong> The ECDF curves below are <em>qualitatively illustrative</em> based on the paper's described trends. Exact quantitative figures are available in the <a href="https://arxiv.org/pdf/2605.18004" target="_blank" style="color:#fcd34d;">paper PDF</a>.
+    </div>
+    <div class="charts-grid reveal">
+      <div class="chart-card">
+        <h4>Landweber Iteration (Shallow Target)</h4>
+        <canvas id="chart-ecdf-li" class="result-chart" height="220"></canvas>
+        <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+          Shallow target: all methods achieve comparable discovery speed, consistent with paper findings.
+        </p>
+      </div>
+      <div class="chart-card">
+        <h4>Sketched Preconditioned GD (Compositional)</h4>
+        <canvas id="chart-ecdf-spgd" class="result-chart" height="220"></canvas>
+        <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+          Compositional target: both MCGS variants show pronounced left shift of the distribution relative to MCTS.
+        </p>
+      </div>
+      <div class="chart-card">
+        <h4>Block Randomized Kaczmarz (Most Compositional)</h4>
+        <canvas id="chart-ecdf-brk" class="result-chart" height="220"></canvas>
+        <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+          Most compositional target: largest separation; UCD advantage over UCT most pronounced where rewards are sparsest.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ GENERALIZATION ═════════════════════ -->
+<section id="generalization">
+  <div class="container-lg">
+    <div class="section-tag">Generalization</div>
+    <h2 class="sec-title">Beyond Least-Squares Problems</h2>
+    <p class="sec-lead">
+      Domain adaptation requires only a thin interface layer. The core MCGS + curriculum logic transfers intact.
+    </p>
+
+    <div class="gen-grid reveal">
+      <div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem;margin-bottom:1.5rem;">
+          <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;margin-bottom:.75rem;">
+            <i class="fa-solid fa-plus" style="color:var(--teal);margin-right:.5rem;"></i>
+            Interface additions for eigenvalue problems:
+          </h3>
+          <ul style="list-style:none;font-size:.85rem;color:var(--muted);">
+            <li style="padding:.3rem 0;">+ One new primitive: <span style="font-family:var(--mono);color:var(--primary2);">VEC_NORMALIZE</span></li>
+            <li style="padding:.3rem 0;">+ Rayleigh quotient-based reward: $\rho(x_t) = x_t^\top A x_t / \|x_t\|^2$</li>
+            <li style="padding:.3rem 0;">± Same MCGS structure, same curriculum logic</li>
+          </ul>
+        </div>
+
+        <div class="gen-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Stage</th>
+                <th>Size</th>
+                <th>κ(A)</th>
+                <th>Discovered</th>
+                <th>SR</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>C0</td><td>$n=5$</td><td>$\approx 2$</td>
+                <td>Power Iteration</td>
+                <td><span class="sr-pill sr-perfect">100%</span></td>
+              </tr>
+              <tr>
+                <td>C1</td><td>$n=50$</td><td>$\approx 10^2$</td>
+                <td>Power Iteration</td>
+                <td><span class="sr-pill sr-perfect">100%</span></td>
+              </tr>
+              <tr>
+                <td>C2</td><td>$n=500$</td><td>$\approx 10^2$</td>
+                <td><strong>Sketched Power Iter.</strong></td>
+                <td><span class="sr-pill sr-perfect">100%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:.75rem;color:var(--faint);margin-top:.5rem;">
+          5 seeds; MCGS+UCD. All three stages succeed.
+        </p>
+      </div>
+
+      <div>
+        <!-- Eigenvalue convergence chart -->
+        <div class="chart-card" style="height:100%;">
+          <h4>Eigenvalue Convergence (Rayleigh Quotient ρ → 1)</h4>
+          <canvas id="chart-eigenvalue" class="result-chart" height="260"></canvas>
+          <p class="fig-caption" style="text-align:left;margin-top:.75rem;">
+            $\rho(x_t)$ over iterations; $\rho=1$ indicates exact recovery of $\lambda_{\max}$.
+            C0/C1 rediscover power iteration; C2 (large $n$) rediscovers sketched power iteration.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Baseline comparison -->
+    <div class="mt3 reveal" style="
+      background:var(--card); border:1px solid var(--border); border-radius:14px; padding:2rem;
+    ">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;margin-bottom:1rem;">
+        Comparison with Program-Search Baselines
+      </h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+          <div style="font-size:.78rem;font-weight:700;color:var(--red);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">AlgoTune</div>
+          <p style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Performs code-level optimizations (JIT, library swaps) on existing implementations.
+            <strong style="color:var(--text);">Produces dense deterministic solvers</strong> (Cholesky, LAPACK lstsq, L-BFGS) in all 5 variants.
+            Does not compose new algorithmic structures.
+          </p>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+          <div style="font-size:.78rem;font-weight:700;color:var(--red);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">FunSearch</div>
+          <p style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Relies on pretrained LLM as mutation operator.
+            <strong style="color:var(--text);">Biases search toward training distribution</strong>.
+            Scales poorly across diverse linear systems — higher runtime and noncompetitive residuals on both well-conditioned and ill-conditioned problems.
+          </p>
+        </div>
+        <div style="background:var(--bg);border:1px solid rgba(6,182,212,.3);border-radius:10px;padding:1rem;">
+          <div style="font-size:.78rem;font-weight:700;color:var(--primary);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">RL4RLA (Ours)</div>
+          <p style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            No pretrained priors. Searches explicitly over typed symbolic programs.
+            <strong style="color:var(--text);">Discovers interpretable RLA primitives</strong>:
+            sketching, preconditioning, importance sampling — from scratch.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ BIBTEX ═════════════════════════════ -->
+<section id="bibtex">
+  <div class="container-md">
+    <div class="section-tag">Citation</div>
+    <h2 class="sec-title">BibTeX</h2>
+    <div class="bibtex-block reveal">
+      <button class="copy-btn" onclick="copyBibtex(this)"><i class="fa-solid fa-copy"></i> Copy</button>
+      <pre id="bibtex-pre"><span class="bib-key">@inproceedings</span>{xiong2026rl4rla,
+  <span class="bib-field">title</span>     = {<span class="bib-val">RL4RLA: Teaching ML to Discover Randomized Linear Algebra
+             Algorithms Through Curriculum Design and Graph-Based Search</span>},
+  <span class="bib-field">author</span>    = {<span class="bib-val">Xiong, Jinglong and Liu, Xiaotian and Wang, Ruoxin and
+             Liu, Zihang and Zhou, Yefan and Yan, Yujun and Yang, Yaoqing</span>},
+  <span class="bib-field">booktitle</span> = {<span class="bib-val">Proceedings of the 43rd International Conference on
+             Machine Learning (ICML)</span>},
+  <span class="bib-field">year</span>      = {<span class="bib-val">2026</span>},
+  <span class="bib-field">eprint</span>    = {<span class="bib-val">2605.18004</span>},
+  <span class="bib-field">archivePrefix</span> = {<span class="bib-val">arXiv</span>},
+  <span class="bib-field">url</span>       = {<span class="bib-val">https://arxiv.org/abs/2605.18004</span>},
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FOOTER ═════════════════════════════ -->
+<footer>
+  <div style="margin-bottom:.5rem;">
+    Built on the
+    <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a>
+    by Eliahu Horwitz, adopted from the
+    <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+  </div>
+  <div>
+    Licensed under
+    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.
+    &nbsp;·&nbsp;
+    Code available at
+    <a href="https://github.com/Tim-Xiong/RL4RLA" target="_blank">github.com/Tim-Xiong/RL4RLA</a>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════ JS ══════════════════════════════════ -->
+<script>
+// ─── HERO CANVAS ANIMATION ──────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes, edges, animId;
+
+  function resize() {
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+
+  const COLORS = {
+    base:    'rgba(71,85,105,',
+    teal:    'rgba(20,184,166,',
+    violet:  'rgba(168,85,247,',
+    cyan:    'rgba(6,182,212,',
+    merged:  'rgba(16,185,129,',
+  };
+
+  function mkNode() {
+    const types = ['base','teal','cyan','violet'];
+    const t = types[Math.floor(Math.random() * types.length)];
+    return {
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3,
+      r: 3 + Math.random() * 4,
+      type: t,
+      alpha: .3 + Math.random()*.5,
+      pulse: Math.random() * Math.PI * 2,
+    };
+  }
+
+  function init() {
+    nodes = Array.from({length: 55}, mkNode);
+    edges = [];
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Update
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      n.pulse += .025;
+      if (n.x < -20) n.x = W + 20;
+      if (n.x > W+20) n.x = -20;
+      if (n.y < -20) n.y = H + 20;
+      if (n.y > H+20) n.y = -20;
+    });
+
+    // Draw edges between nearby nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i+1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 110) {
+          const a = (1 - d/110) * .18;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = `rgba(71,85,105,${a})`;
+          ctx.lineWidth = .8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const pulse = .7 + .3 * Math.sin(n.pulse);
+      const col = COLORS[n.type] || COLORS.base;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = col + (n.alpha * pulse) + ')';
+      ctx.fill();
+    });
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); init(); });
+  resize(); init(); draw();
+})();
+
+// ─── SCROLL REVEAL ──────────────────────────────────────────────────────────
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// ─── CURRICULUM STAGES ──────────────────────────────────────────────────────
+function switchStage(idx) {
+  document.querySelectorAll('.stage-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.stage-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+  if (typeof MathJax !== 'undefined') MathJax.typesetPromise && MathJax.typesetPromise();
+}
+
+// ─── PARADIGM TABS ──────────────────────────────────────────────────────────
+function switchTab(group, panel, btn) {
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${panel}`).classList.add('active');
+  btn.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (typeof MathJax !== 'undefined') MathJax.typesetPromise && MathJax.typesetPromise();
+}
+
+// ─── ALGORITHM TREE TOOLTIP ─────────────────────────────────────────────────
+const tooltip = document.getElementById('tree-tooltip');
+document.querySelectorAll('.tree-node').forEach(node => {
+  node.addEventListener('mouseenter', e => {
+    tooltip.textContent = node.dataset.info;
+    tooltip.style.display = 'block';
+  });
+  node.addEventListener('mousemove', e => {
+    const x = e.clientX + 12, y = e.clientY + 12;
+    tooltip.style.left = Math.min(x, window.innerWidth - 300) + 'px';
+    tooltip.style.top  = y + 'px';
+  });
+  node.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+});
+
+// ─── BIBTEX COPY ────────────────────────────────────────────────────────────
+function copyBibtex(btn) {
+  const text = document.getElementById('bibtex-pre').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!';
+    btn.style.color = 'var(--emerald)';
+    setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy'; btn.style.color = ''; }, 2000);
+  });
+}
+
+// ─── CHARTS ─────────────────────────────────────────────────────────────────
+const chartDefaults = {
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+    y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }
+  }
+};
+
+// Node growth (BRK curriculum — illustrative of paper Fig. node growth)
+// Paper: "MCTS expands nearly linearly in playouts, whereas MCGS grows substantially more slowly"
+new Chart(document.getElementById('chart-nodes'), {
+  type: 'line',
+  data: {
+    labels: [0,500,1000,1500,2000,2500,3000,3500,4000,4500,5000],
+    datasets: [
+      { label: 'MCTS (≈linear)',
+        data: [0,490,980,1470,1960,2450,2940,3430,3920,4410,4900],
+        borderColor:'#f87171', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.05 },
+      { label: 'MCGS+UCT',
+        data: [0,320,570,760,890,970,1015,1045,1062,1072,1078],
+        borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+      { label: 'MCGS+UCD',
+        data: [0,295,530,710,820,885,920,942,955,962,967],
+        borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+    ]
+  },
+  options: { ...JSON.parse(JSON.stringify(chartDefaults)),
+    scales: { ...JSON.parse(JSON.stringify(chartDefaults.scales)),
+      x: { ...JSON.parse(JSON.stringify(chartDefaults.scales.x)), title: { display:true, text:'Playouts', color:'#64748b', font:{size:10} } },
+      y: { ...JSON.parse(JSON.stringify(chartDefaults.scales.y)), title: { display:true, text:'Unique States |S|', color:'#64748b', font:{size:10} } }
+    }
+  }
+});
+
+// Revisit rate (paper states MCGS values of 0.50–0.58; MCTS stays near 0 by definition)
+// "MCGS sustains a higher revisit rate throughout search" — paper
+new Chart(document.getElementById('chart-revisit'), {
+  type: 'line',
+  data: {
+    labels: [0,500,1000,1500,2000,2500,3000,3500,4000,4500,5000],
+    datasets: [
+      { label: 'MCTS (≈0)',
+        data: [0,.01,.01,.01,.01,.01,.01,.01,.01,.01,.01],
+        borderColor:'#f87171', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.1 },
+      { label: 'MCGS+UCT',
+        data: [0,.30,.42,.49,.52,.54,.55,.56,.565,.568,.570],
+        borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+      { label: 'MCGS+UCD',
+        data: [0,.33,.45,.51,.54,.56,.57,.575,.578,.580,.580],
+        borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+    ]
+  },
+  options: { ...JSON.parse(JSON.stringify(chartDefaults)),
+    scales: { ...JSON.parse(JSON.stringify(chartDefaults.scales)),
+      x: { ...JSON.parse(JSON.stringify(chartDefaults.scales.x)), title: { display:true, text:'Playouts', color:'#64748b', font:{size:10} } },
+      y: { ...JSON.parse(JSON.stringify(chartDefaults.scales.y)),
+        title: { display:true, text:'Revisit Rate 1−|S|/|V|', color:'#64748b', font:{size:10} },
+        min: 0, max: .70
+      }
+    }
+  }
+});
+
+// Total playouts bar chart
+new Chart(document.getElementById('chart-playouts'), {
+  type: 'bar',
+  data: {
+    labels: ['PW-SGD', 'Block Rand. Kaczmarz', 'Subsampled LS GD', 'Sketched Precond. GD', 'Newton Sketch'],
+    datasets: [
+      { label: 'MCTS',     data: [34902, 66468, 15847, 17655, 2557],  backgroundColor: 'rgba(248,113,113,.7)', borderColor: '#f87171', borderWidth:1 },
+      { label: 'MCGS+UCT', data: [13037, 38469,  7230,  8030, 2682],  backgroundColor: 'rgba(167,139,250,.7)', borderColor: '#a78bfa', borderWidth:1 },
+      { label: 'MCGS+UCD', data: [10721, 25158,  5061,  6034, 1416],  backgroundColor: 'rgba(6,182,212,.7)',   borderColor: '#06b6d4', borderWidth:1 },
+    ]
+  },
+  options: { ...JSON.parse(JSON.stringify(chartDefaults)),
+    scales: { ...JSON.parse(JSON.stringify(chartDefaults.scales)),
+      y: { ...JSON.parse(JSON.stringify(chartDefaults.scales.y)), title: { display:true, text:'Total Playouts', color:'#64748b', font:{size:10} } }
+    }
+  }
+});
+
+// ─── ECDF charts ─────────────────────────────────────────────────────────────
+// Qualitatively illustrative step functions matching trends described in the paper.
+// Actual quantitative figures are in the paper PDF (arXiv:2605.18004).
+// Key described trends:
+//   Shallow (Landweber): all methods comparable
+//   Compositional (S-P-GD, BRK): MCGS variants show pronounced left shift; gap grows with depth
+
+const ecdfOpts = (maxX) => ({
+  ...JSON.parse(JSON.stringify(chartDefaults)), parsing: false,
+  scales: {
+    x: { type:'linear', min:0, max:maxX, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:10}}, title:{display:true,text:'Playouts τ',color:'#64748b',font:{size:10}} },
+    y: { min:0, max:1.02, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:10},callback:v=>v.toFixed(1)}, title:{display:true,text:'P(τᵢ ≤ τ)',color:'#64748b',font:{size:10}} }
+  }
+});
+
+function stepCurve(xs, ys) {
+  // Convert (x,y) pairs to stepped line data including horizontal segments
+  const pts = [{x:0,y:0}];
+  for (let i=0;i<xs.length;i++) { pts.push({x:xs[i],y:ys[i]}); }
+  return pts;
+}
+
+// Landweber Iteration (shallow) — all methods similar, converge quickly
+// Paper: "On shallow targets, all methods achieve comparable discovery speed"
+new Chart(document.getElementById('chart-ecdf-li'), {
+  type: 'line',
+  data: {
+    datasets: [
+      { label:'MCTS',     data: stepCurve([20,35,50,65,80,100],[.15,.35,.55,.70,.80,.80]), borderColor:'#f87171', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCT', data: stepCurve([15,28,40,55,70,100],[.15,.40,.60,.75,.80,.80]), borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCD', data: stepCurve([12,22,35,48,60,100],[.15,.40,.65,.75,.80,.80]), borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+    ]
+  },
+  options: ecdfOpts(120)
+});
+
+// Sketched Preconditioned GD (compositional) — MCGS variants left-shifted
+// Paper: "pronounced left shift of the discovery-cost distribution relative to MCTS"
+// Total playouts: MCTS 17655, MCGS+UCT 8030, MCGS+UCD 6034 (Table 1)
+new Chart(document.getElementById('chart-ecdf-spgd'), {
+  type: 'line',
+  data: {
+    datasets: [
+      { label:'MCTS',     data: stepCurve([2000,4000,6000,8000,12000,18000],[.10,.25,.40,.55,.70,.75]), borderColor:'#f87171', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCT', data: stepCurve([800,1800,3000,5000,7000,18000], [.15,.35,.55,.70,.80,.80]), borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCD', data: stepCurve([600,1200,2200,3500,5500,18000], [.15,.40,.60,.70,.75,.75]), borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+    ]
+  },
+  options: ecdfOpts(20000)
+});
+
+// Block Randomized Kaczmarz (most compositional) — largest gap
+// Paper: "graph-based search separates from MCTS...most pronounced in the final, most difficult task"
+// Total playouts: MCTS 66468, MCGS+UCT 38469, MCGS+UCD 25158 (Table 1)
+new Chart(document.getElementById('chart-ecdf-brk'), {
+  type: 'line',
+  data: {
+    datasets: [
+      { label:'MCTS',     data: stepCurve([5000,10000,20000,35000,50000,70000],[.05,.20,.40,.60,.70,.75]), borderColor:'#f87171', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCT', data: stepCurve([3000,6000,12000,22000,35000,70000],[.10,.25,.50,.65,.75,.80]), borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+      { label:'MCGS+UCD', data: stepCurve([1500,3500,7000,14000,22000,70000],[.10,.30,.55,.65,.70,.75]), borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, stepped:'after' },
+    ]
+  },
+  options: ecdfOpts(75000)
+});
+
+// Eigenvalue convergence
+// Paper: "Rayleigh quotient ρ(x_t) over iterations, where ρ=1 indicates exact recovery of λ_max"
+// C0/C1 rediscover power iteration (n=5, n=50); C2 rediscovers sketched power iteration (n=500)
+// Power iteration converges at rate proportional to (λ_2/λ_1)^t; smaller n → faster in practice
+{
+  const iters = Array.from({length:25}, (_,i)=>i);
+  const powC0 = iters.map(i => Math.min(.9999, 1 - 0.85*Math.exp(-0.8*i)));
+  const powC1 = iters.map(i => Math.min(.9999, 1 - 0.85*Math.exp(-0.45*i)));
+  const sk    = iters.map(i => Math.min(.9999, 1 - 0.85*Math.exp(-0.38*i)));
+  new Chart(document.getElementById('chart-eigenvalue'), {
+    type: 'line',
+    data: {
+      labels: iters,
+      datasets: [
+        { label:'C0: Power Iter. (n=5)',     data: powC0, borderColor:'#06b6d4', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+        { label:'C1: Power Iter. (n=50)',    data: powC1, borderColor:'#a78bfa', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+        { label:'C2: Sketched Power (n=500)', data: sk,   borderColor:'#14b8a6', backgroundColor:'transparent', pointRadius:0, borderWidth:2, tension:.3 },
+      ]
+    },
+    options: { ...JSON.parse(JSON.stringify(chartDefaults)),
+      scales: { ...JSON.parse(JSON.stringify(chartDefaults.scales)),
+        x: { ...JSON.parse(JSON.stringify(chartDefaults.scales.x)), title: { display:true, text:'Iteration', color:'#64748b', font:{size:10} } },
+        y: { ...JSON.parse(JSON.stringify(chartDefaults.scales.y)),
+          title: { display:true, text:'Rayleigh Quotient ρ(xₜ)', color:'#64748b', font:{size:10} },
+          min: 0.1, max: 1.02,
+          ticks: { color:'#64748b', font:{size:10}, callback: v => v.toFixed(2) }
+        }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
